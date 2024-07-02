@@ -1,5 +1,9 @@
 "use server";
 
+import { hashUserPassword } from "@/lib/hash";
+import { createUser } from "@/lib/user";
+import { redirect } from "next/dist/server/api-utils";
+
 export async function signup(prevState, formData) {
     const email = formData.get("email");
     const password = formData.get("password");
@@ -16,4 +20,20 @@ export async function signup(prevState, formData) {
     if (Object.keys(errors).length > 0) {
         return { errors };
     }
+
+    const hashPassword = hashUserPassword(password);
+    try {
+        createUser(email, hashPassword);
+    } catch (error) {
+        if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
+            return {
+                errors: {
+                    email: "It seems like an account for the chosen email already exits.",
+                },
+            };
+        }
+        throw error;
+    }
+
+    redirect("/training");
 }
